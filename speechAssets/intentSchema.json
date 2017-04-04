@@ -1,0 +1,68 @@
+{
+  "intents": [
+    {
+      "intent": "CustomerOrders"
+    },
+    {
+      "slots": [
+        {
+          "name": "month",
+          "type": "AMAZON.Month"
+        }
+      ],
+      "intent": "SalesByMonth"
+    },
+    {
+      "slots": [
+        {
+          "name": "product",
+          "type": "PRODUCTS"
+        }
+      ],
+      "intent": "SalesByProduct"
+    },
+    {
+      "slots": [
+        {
+          "name": "type",
+          "type": "SHAPES"
+        }
+      ],
+      "intent": "NbrProvisioned"
+    },
+    {
+      "slots": [
+        {
+          "name": "dbversion",
+          "type": "AMAZON.NUMBER"
+        }
+      ],
+      "intent": "DatabaseVersion"
+    },
+    {
+      "slots": [
+        {
+          "name": "shape",
+          "type": "SHAPES"
+        },
+        {
+          "name": "size",
+          "type": "SIZES"
+        }
+      ],
+      "intent": "Provision"
+    },
+    {
+      "intent": "SayHello"
+    },
+    {
+      "intent": "Status"
+    },
+    {
+      "intent": "TimeToComplete"
+    },
+    {
+      "intent": "AMAZON.HelpIntent"
+    }
+  ]
+}
