@@ -26,7 +26,7 @@ var restClient = new RESTClient();
 
 // Default Ports
 var PORTS = {
-  HTTP: config.web.http.port || 80,
+  HTTP: config.web.http.port || 8080,
   HTTPS: config.web.https.port || 443,
   FORCE_SSL_PORT: ''
 }
@@ -114,7 +114,7 @@ app.use(bodyParser.json());
 //Start server
 var server = http.createServer(app).listen(PORTS.HTTP,function(){
   console.log('Server Ready');
-  console.log('http://ruepprich.com/ords/f?p=103');
+  console.log('http://localhost:8080/ords/f?p=103');
   console.log('socket.io will not work with https');
   console.log('On error check that Apache is not already running.');
   console.log('APEX runs on Jackie. Workspace hr,cruepprich, G_22, app 102/103');
@@ -302,7 +302,8 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
     soc.emit('CustomerOrders',socketPayload);
 
    // //Fetch result via REST
-    var restURL = "https://ruepprich.com/ords/cmr/alexa/custorders/"
+    //var restURL = "http://localhost:8080/ords/cmr/alexa/custorders/"
+    var restURL = "http://localhost:8080/ords/cmr/alexa/custorders/"
 
     restClient.get(restURL, function (data, response) {
 
@@ -580,7 +581,7 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
     console.log('IntentName',req.body.request.intent.name);
 
     // //Fetch result via REST
-    var restURL = "https://ruepprich.com/ords/cmr/alexa/orders/"
+    var restURL = "http://localhost:8080/ords/cmr/alexa/orders/"
 
     restClient.get(restURL, function (data, response) {
 
@@ -890,4 +891,4 @@ if (config.web.https.enabled){
     app).listen(PORTS.HTTPS);
 }// config.web.https
 
-console.log('done')
+console.log('all the way done')
