@@ -1,85 +1,22 @@
 CustomerOrders show me customer sales
 CustomerOrders show me customer orders
 
-SalesByProduct show me {product}
-SalesByProduct show the sales for {product}
-SalesByProduct show me the product sales
-SalesByProduct show me product sales
-
 SalesByMonth show me the monthly sales
 SalesByMonth show me monthly sales
 SalesByMonth show me the {month} sales
 SalesByMonth show me the sales for the month of {month}
 
-NbrProvisioned How many are provisioned
-NbrProvisioned how many
-NbrProvisioned what's provisioned
-NbrProvisioned what's out there
+SalesByProduct show me {product}
+SalesByProduct show the sales for {product}
+SalesByProduct show me the product sales
+SalesByProduct show me product sales
 
+SayHello say hello
+SayHello greet the audience
+SayHello say hello to the audience
+SayHello say hello to everyone
 
-
-
-
-DatabaseVersion {dbversion}
-DatabaseVersion database {dbversion}
-DatabaseVersion oracle {dbversion}
-DatabaseVersion oracle database {dbversion}
-
-DatabaseVersion {dbversion} c
-DatabaseVersion database {dbversion} c
-DatabaseVersion oracle {dbversion} c
-DatabaseVersion oracle database {dbversion} c
-
-
-
-
-
-
-
-
-Provision provision an instance
-Provision provision a {shape}
-Provision provision a {shape} instance
-Provision provision a {shape} platform
-
-Provision provision a {shape} {size} 
-Provision provision a {shape} {size} instance
-Provision provision a {shape} {size} platform
-
-Provision provision a {size} {shape} 
-Provision provision a {size} {shape} instance
-Provision provision a {size} {shape} platform
-
-
-Provision provision an instance
-Provision provision an {shape}
-Provision provision an {shape} instance
-Provision provision an {shape} platform
-
-Provision provision an {shape} {size} 
-Provision provision an {shape} {size} instance
-Provision provision an {shape} {size} platform
-
-Provision provision an {size} {shape} 
-Provision provision an {size} {shape} instance
-Provision provision an {size} {shape} platform
-
-Provision {shape}
-
-
-
-
-Status what's the status
-Status what is the status
-Status what's going on
-Status what is going on
-Status what's up
-Status what is up
-
-
-
-
-TimeToComplete when are you done
-TimeToComplete when are we done
-TimeToComplete how much longer
-TimeToComplete how much time is left
+SayBye say bye
+SayBye say good bye
+SayBye say bye to the audience
+SayBye say good bye to the audience

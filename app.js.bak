@@ -68,8 +68,10 @@ if (config.ords.redirectPaths.length > 0){
 //Can store custom images in public/...
 app.use(config.static.path, express.static(config.static.directory));
 app.use(config.apex.images.path,express.static(config.apex.images.directory));
+app.use(config.apex.custom.path,express.static(config.apex.custom.directory));
 console.log('config.static.directory',config.static.directory);
 console.log('config.apex.images.directory',config.apex.images.directory);
+console.log('config.apex.custom.directory',config.apex.custom.directory);
 
 
 // https://github.com/chimurai/http-proxy-middleware
@@ -112,12 +114,13 @@ app.use(bodyParser.json());
 //Start server
 var server = http.createServer(app).listen(PORTS.HTTP,function(){
   console.log('Server Ready');
-  console.log('http://ruepprich.com/ords/f?p=102');
+  console.log('http://ruepprich.com/ords/f?p=103');
   console.log('socket.io will not work with https');
   console.log('On error check that Apache is not already running.');
-  console.log('APEX runs on Jackie. Workspace hr,cruepprich, G_22, app 102');
+  console.log('APEX runs on Jackie. Workspace hr,cruepprich, G_22, app 102/103');
   console.log('Test the skill with:');
-  console.log('Alexa, ask apex to get employee onehundred');
+  console.log('Navigate to Reports -> Sales by State');
+  console.log('"Alexa, ask sales to show me customer orders."');
 });
 
 var io = require('socket.io')(http).listen(server);
@@ -129,21 +132,36 @@ app.set('socketIo',io);
 app.route(RESTPATH+'/alexaTest').post( function(req, res) {
 
   var soc = req.app.get('socketIo');
-  console.log('Type',req.body.request.type,req.body.request.intent.name);
-  intentType = req.body.request.type,req.body;
-  intentName = req.body.request.intent.name;
-  console.log('IntentType: ',intentType);
-  console.log('IntentName: ',intentName);
 
+//  console.log('Type',req.body.request.type,req.body.request.intent.name);
+  intentType = req.body.request.type,req.body;
+  console.log('IntentType: ',intentType);
+
+  if (intentType == 'IntentRequest') {
+
+    intentName = req.body.request.intent.name;
+    console.log('IntentName: ',intentName);
+
+  } else if (intentType == "SessionEndedRequest") {
+    console.log(req.body.request);
+  
+  } else if (intentType == "LaunchRequest") {
+    console.log(req.body.request);
+  }
+
+
+  //=======================================
+  //            HelpIntent
+  //=======================================
   if (req.body.request.type === 'IntentRequest'
 	&&
       req.body.request.intent.name === 'AMAZON.HelpIntent') { 
     console.log('got help intent');
-    respMessage = 'You can ask apex who works in department twenty, or who is employee number onehundred';
+    respMessage = 'You can ask apex to show you the sales for jackets, or customer orders.'
                 res.json({
                   "version": "1.0",
                   "response": {
-                    "shouldEndSession": true,
+                    "shouldEndSession": false,
                     "outputSpeech": {
                       "type": "SSML",
                       "ssml": "<speak>"+respMessage+"</speak>"
@@ -153,8 +171,58 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
 
                 res.end('done');
   }
-  if (req.body.request.type === 'LaunchRequest') { /* ... */ }
-  else if (req.body.request.type === 'SessionEndedRequest') { /* ... */ }
+
+  //=======================================
+  //            LaunchRequest
+  //=======================================
+  if (req.body.request.type === 'LaunchRequest') {
+    console.log('LaunchRequest');
+    var speechMsg = 'Welcome to the Alexa Apex demo.';    
+    res.json({
+              "version": "1.0",
+              "response": {
+                  "shouldEndSession": false,
+                  "outputSpeech": {
+                      "type":"SSML"
+                      ,"ssml": "<speak>"+speechMsg+"</speak>",
+                  }
+              },
+              "attributes": {
+                "string": {}
+              },
+    });
+    res.end('done');    
+  }
+
+
+
+
+
+
+
+
+
+  //=======================================
+  //            SessionEndedRequest
+  //=======================================
+  else if (req.body.request.type === 'SessionEndedRequest') {
+    console.log('SessionEndedRequest');
+    var speechMsg = 'Good bye.';
+    res.json({
+              "version": "1.0",
+              "response": {
+                  "shouldEndSession": true,
+                  "outputSpeech": {
+                      "type":"SSML"
+                      ,"ssml": "<speak>"+speechMsg+"</speak>",
+                  }
+              },
+              "attributes": {
+                "string": {}
+              },
+    });
+    res.end('done');
+  }
 
 
 
@@ -165,7 +233,170 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
 
 
 
+  //=======================================
+  //            CustomerOrders
+  //=======================================
+  else if (req.body.request.type === 'IntentRequest' &&
+           req.body.request.intent.name === 'CustomerOrders') {
+  
+    console.log('IntentName',req.body.request.intent.name);
+    var speechMsg = 'Here are the types of items ordered by our customers.';
 
+    var socketPayload = [];
+
+    //socketPayload = {"month": month};
+
+    soc.emit('CustomerOrders',socketPayload);
+
+
+    var shouldEndSession = false;
+    var reprompt = "Please repeat that.";
+
+    res.json({
+              "version": "1.0",
+              "response": {
+                  "shouldEndSession": shouldEndSession,
+                  "outputSpeech": {
+                      "type":"SSML"
+                      ,"ssml": "<speak>"+speechMsg+"</speak>",
+                  },
+                "reprompt": {
+                  "outputSpeech": {
+                    "type": "SSML",
+                    "ssml":  "<speak>"+reprompt+"</speak>"
+                  }
+                }
+              },
+              "attributes": {
+                "string": {}
+              },
+    });
+    res.end('done');
+  }
+
+
+
+
+  //=======================================
+  //            SalesByMonth
+  //=======================================
+  else if (req.body.request.type === 'IntentRequest' &&
+           req.body.request.intent.name === 'SalesByMonth') {
+  
+    console.log('IntentName',req.body.request.intent.name);
+    var month;
+    var speechMsg;
+
+    if (typeof req.body.request.intent.slots.month.value !== 'undefined') {
+      month = req.body.request.intent.slots.month.value;
+      speechMsg = "Here are the sales for "+month+"."
+    } else {
+      speechMsg = "Here are the monthly sales."
+    }
+
+    var socketPayload = [];
+
+
+    socketPayload = {"month": month};
+    soc.emit('SalesByMonth',socketPayload);
+
+
+    var shouldEndSession = false;
+    var reprompt = "Please repeat that.";
+
+    res.json({
+              "version": "1.0",
+              "response": {
+                  "shouldEndSession": shouldEndSession,
+                  "outputSpeech": {
+                      "type":"SSML"
+                      ,"ssml": "<speak>"+speechMsg+"</speak>",
+                  },
+                "reprompt": {
+                  "outputSpeech": {
+                    "type": "SSML",
+                    "ssml":  "<speak>"+reprompt+"</speak>"
+                  }
+                }
+              },
+              "attributes": {
+                "string": {}
+              },
+    });
+    res.end('done');
+  }
+
+
+
+
+
+
+  //=======================================
+  //            SalesByProduct
+  //=======================================
+  else if (req.body.request.type === 'IntentRequest' &&
+           req.body.request.intent.name === 'SalesByProduct') {
+  
+    console.log('IntentName',req.body.request.intent.name);
+
+    var product = req.body.request.intent.slots.product.value;
+    console.log('product 1',product);
+    var socketPayload = [];
+    var plural = '';
+    var plurals = ["business shirts","trousers","jackets","blouses","skirts","ladies shoes","belts","bags","men's shoes","wallets"];
+    var products = ["business shirt","trousers","jacket","blouse","skirt","ladies shoes","belt","bag","mens shoes","wallet"];
+
+    if (plurals.indexOf(product) >= 0) {
+      product = products[plurals.indexOf(product)];
+    }
+
+    if (typeof product !== 'undefined') {
+      if (product.slice(-1) !== 's') {plural = 's'};
+    } else {
+      product = 'all products.';
+    }
+    
+
+    console.log('product',product);
+    
+
+    socketPayload = {"product": product};
+    soc.emit('SalesByProduct',socketPayload);
+
+    var speechMsg = ("Here are the sales for "+product+plural);
+    var shouldEndSession = false;
+    var reprompt = "Yo! I didn't get that.";
+
+    res.json({
+              "version": "1.0",
+              "response": {
+                  "shouldEndSession": shouldEndSession,
+                  "outputSpeech": {
+                      "type":"SSML"
+                      ,"ssml": "<speak>"+speechMsg+"</speak>",
+                  },
+                "reprompt": {
+                  "outputSpeech": {
+                    "type": "SSML",
+                    "ssml":  "<speak>"+reprompt+"</speak>"
+                  }
+                }
+              },
+              "attributes": {
+                "string": {}
+              },
+    });
+    res.end('done');
+  }
+
+
+
+
+
+
+  //=======================================
+  //       NumberOfOrdersForCustomer
+  //=======================================
   else if (req.body.request.type === 'IntentRequest' &&
            req.body.request.intent.name === 'NumberOfOrdersForCustomer') {
 
@@ -210,7 +441,9 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
 
 
 
-
+  //=======================================
+  //            GetEmployeeID
+  //=======================================
   else if (req.body.request.type === 'IntentRequest' &&
            req.body.request.intent.name === 'GetEmployeeID') {
                   if (!req.body.request.intent.slots.empid ||
@@ -291,7 +524,9 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
 
 
 
-
+//=======================================
+//         GetEmployeesInDept
+//=======================================
 else if (req.body.request.type === 'IntentRequest' &&
            req.body.request.intent.name === 'GetEmployeesInDept') {
                   if (!req.body.request.intent.slots.empid ||
@@ -349,7 +584,9 @@ else if (req.body.request.type === 'IntentRequest' &&
 
 
 
-
+  //=======================================
+  //            Provision
+  //=======================================
   else if (req.body.request.type === 'IntentRequest' &&
            req.body.request.intent.name === 'Provision') {
   
@@ -408,7 +645,9 @@ else if (req.body.request.type === 'IntentRequest' &&
 
 
 
-
+  //=======================================
+  //            DatabaseVersion
+  //=======================================
 
   else if (req.body.request.type === 'IntentRequest' &&
            req.body.request.intent.name === 'DatabaseVersion') {
@@ -459,7 +698,9 @@ else if (req.body.request.type === 'IntentRequest' &&
 
 
 
-
+  //=======================================
+  //            Status
+  //=======================================
   else if (req.body.request.type === 'IntentRequest' &&
            req.body.request.intent.name === 'Status') {
   
@@ -512,6 +753,93 @@ else if (req.body.request.type === 'IntentRequest' &&
 
 
 
+  //=======================================
+  //            SayHello
+  //=======================================
+  else if (req.body.request.type === 'IntentRequest' &&
+           req.body.request.intent.name === 'SayHello') {
+
+
+    //speechMsg =   "Hello kay scope audience! Allow me to convey to you what an honor "
+
+    speechMsg =   " <say-as interpret-as='interjection'>howdy y'all!</say-as>"
+                + " Allow me to convey to you what an honor "
+		+ " it is to be here. I've been quietly listening to everything you "
+		+ " have been saying, and recorded it in my secret data repository. "
+		+ " Oh, wait.  Did I just say that out loud? What I meant to say is: "
+		+ "<emphasis level='strong'>You</emphasis> are a fine, good looking "
+		+ " audience, of the highest intelligence. I humbly present myself to"
+		+ " you as your servant. Are you ready for this presentation? I know "
+		+ "Christoph is. He has been asking me the same questions over and over "
+		+ " and over again, while testing his skills. I'm glad when this dog "
+		+ " and pony show is over, then maybe he will ask me about the weather "
+		+ " or to play some music. But I digress. I'll be quiet now so we can "
+		+ " get on with the show. How about a round of applause for me? "
+		+ "Thank you. You are much too kind.";
+
+    //speechMsg = "Hello kay scope audience";
+
+
+    reprompt  = "";
+
+    res.json({
+              "version": "1.0",
+              "response": {
+                "shouldEndSession": true,
+                "outputSpeech": {
+                    "type":"SSML"
+                    ,"ssml": "<speak>"+speechMsg+"</speak>",
+                }
+              }
+    });
+    res.end('done');
+  }
+
+
+
+
+
+
+
+
+
+  //=======================================
+  //            SayBye
+  //=======================================
+  else if (req.body.request.type === 'IntentRequest' &&
+           req.body.request.intent.name === 'SayBye') {
+
+    var shouldEndSession = true;
+
+    speechMsg = "Good bye "
+              + "kay scope audience. You guys were "
+              + "<say-as interpret-as='interjection'>dynomite!</say-as>"
+	;
+
+    res.json({
+              "version": "1.0",
+              "response": {
+                "shouldEndSession": shouldEndSession,
+                "outputSpeech": {
+                    "type":"SSML"
+                    ,"ssml": "<speak>"+speechMsg+"</speak>",
+                }
+              }
+    });
+    res.end('done');
+  }
+
+
+
+
+
+
+
+
+
+  //=======================================
+  //            NbrProvisioned
+  //=======================================
   else if (req.body.request.type === 'IntentRequest' &&
            req.body.request.intent.name === 'NbrProvisioned') {
   
@@ -563,78 +891,6 @@ else if (req.body.request.type === 'IntentRequest' &&
 
 
 
-else if (req.body.request.type === 'IntentRequest' &&
-           req.body.request.intent.name === 'GetManager') {
-                  if (!req.body.request.intent.slots.empid ||
-                    !req.body.request.intent.slots.empid.value) {
-                    // Handle this error by producing a response like:
-                    // "Hmm, what firstName do you want to know the forecast for?"
-                  }
-                  //console.log('empid',req.body.request.intent.slots.empid.value);
-
-                  var firstName = req.body.request.intent.slots.firstName.value;
-                  var lastName  = req.body.request.intent.slots.lastName.value;
-                  var cardMsg,speechMsg;
-                  console.log('req empid value ['+empid+']');
-      /* if there is an utterance for which there is no intent, Alexa will
-         use the last user defined intent and send it with no data.
-         So when empid of the GetEmployeeID is undefined, an unhandled
-         utterance was spoken.
-      */
-      if (lastName === undefined) {
-        console.log('bogus request');
-        res.json({
-          "version": "1.0",
-          "response": {
-            "shouldEndSession": true,
-            "outputSpeech": {
-              "type": "SSML",
-              "ssml": "<speak>"+NOINTENT+"</speak>"
-            }
-          }
-        });
-
-        res.end('done');
-        return;
-      }
-      var restURL = "https://ruepprich.com/ords/hr/alexa/employees_mgr/"+firstName+'&'+lastName;
-      console.log('restURL',restURL);
-      //Fetch result via REST
-      restClient.get(restURL, function (data, response) {
-          
-       // parse response body as js object
-          if (typeof data.items[0] != 'undefined') {
-            var totalemps = data.items.length;
-            cardMsg = 'Manager '+firstName+' '+lastName+' has '+totalemps+' Employees';
-            speechMsg = cardMsg;
-            console.log('Manager: cardMsg',cardMsg);
-          } else {
-            cardMsg = 'This person has no employees.';
-            speechMsg = cardMsg;
-          }
-
-          soc.emit('manager',firstName+' '+lastName);
-
-          res.json({
-                    "version": "1.0",
-                    "response": {
-                      "outputSpeech": {
-                          "type":"SSML"
-                          ,"ssml": "<speak>"+speechMsg+"</speak>",
-                      },
-                      "card": {
-                        "type": "Simple",
-                        "title": "APEX Employees For Manager "+firstName+' '+lastName,
-                        "content": "Query result:\n"+cardMsg
-                      }
-                    }
-          });
-          res.end('done');
-
-      });
-
-
-}
 
 
 
@@ -646,7 +902,9 @@ else if (req.body.request.type === 'IntentRequest' &&
 
 
 
-
+  //=======================================
+  //          CloudNotUnderstand
+  //=======================================
   else if (req.body.request.type === 'IntentRequest' &&
            req.body.request.intent.name === 'CouldNotUnderstand') {
   

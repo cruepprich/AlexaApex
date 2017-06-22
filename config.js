@@ -22,15 +22,21 @@ config.web.https.forceSSLPort = config.web.https.port ; // If Forcing SSL, this 
 config.ords = {};
 config.ords.path = '/ords';
 config.ords.redirectPaths = ['/apex']; //array of paths to redirect to config.ords.path. Useful for backwards compatibility with /apex
-//config.ords.webContainerUrl = process.env.WEB_CONTAINER_URL || 'http://vm3:8080'; // This is the link to tomcat or glassfish server
-config.ords.webContainerUrl = process.env.WEB_CONTAINER_URL || 'http://vbgeneric:8080'; // This is the link to tomcat or glassfish server
+config.ords.webContainerUrl = process.env.WEB_CONTAINER_URL || 'http://bmcapex:8080'; // This is the link to tomcat or glassfish server
+//config.ords.webContainerUrl = process.env.WEB_CONTAINER_URL || 'http://vbgeneric:8080'; // This is the link to tomcat or glassfish server
 
 
 //APEX info
 config.apex = {};
 config.apex.images = {};
 config.apex.images.path = '/i';
-config.apex.images.directory = process.env.APEX_IMAGES_DIR || '../apex_images';
+//config.apex.images.directory = process.env.APEX_IMAGES_DIR || '../apex_images';
+config.apex.images.directory = process.env.APEX_IMAGES_DIR || '../apx511/images';
+
+config.apex.custom = {};
+config.apex.custom.path = '/c';
+config.apex.custom.directory = process.env.APEX_IMAGES_DIR || '../custom'
+
 
 //Static file info
 config.static = {}

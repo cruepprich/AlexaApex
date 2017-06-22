@@ -56,9 +56,6 @@ if (config.web.https.enabled){
 
 }// config.web.https
 
-
-
-//*** Begin Node4Ords ***
 //Uncomment if you don't want to redirect / and /apex to the new /ords
 if (config.ords.redirectPaths.length > 0){
   for(i=0; i< config.ords.redirectPaths.length; i++){
@@ -71,8 +68,10 @@ if (config.ords.redirectPaths.length > 0){
 //Can store custom images in public/...
 app.use(config.static.path, express.static(config.static.directory));
 app.use(config.apex.images.path,express.static(config.apex.images.directory));
+app.use(config.apex.custom.path,express.static(config.apex.custom.directory));
 console.log('config.static.directory',config.static.directory);
 console.log('config.apex.images.directory',config.apex.images.directory);
+console.log('config.apex.custom.directory',config.apex.custom.directory);
 
 
 // https://github.com/chimurai/http-proxy-middleware
@@ -97,10 +96,6 @@ app.use(config.ords.path,proxy(
   }
 ));
 
-//*** End Node4Ords ***
-
-
-//Just for fun: display the uptime of the RPi
 app.get('/uptime', function(req, res, next){
   exec("uptime", function(err,out,stderr) {
   if (!err) {
@@ -120,7 +115,7 @@ app.use(bodyParser.json());
 var server = http.createServer(app).listen(PORTS.HTTP,function(){
   console.log('Server Ready');
   console.log('http://ruepprich.com/ords/f?p=103');
-  console.log('Make sure to use http not https. Socket.io will not work with https');
+  console.log('socket.io will not work with https');
   console.log('On error check that Apache is not already running.');
   console.log('APEX runs on Jackie. Workspace hr,cruepprich, G_22, app 102/103');
   console.log('Test the skill with:');
@@ -128,8 +123,6 @@ var server = http.createServer(app).listen(PORTS.HTTP,function(){
   console.log('"Alexa, ask sales to show me customer orders."');
 });
 
-
-//Connect socket.io to web server
 var io = require('socket.io')(http).listen(server);
 
 //now that we have io, we can attach a route that uses socket
@@ -139,12 +132,23 @@ app.set('socketIo',io);
 app.route(RESTPATH+'/alexaTest').post( function(req, res) {
 
   var soc = req.app.get('socketIo');
-  console.log('Type',req.body.request.type,req.body.request.intent.name);
-  intentType = req.body.request.type,req.body;
-  intentName = req.body.request.intent.name;
-  console.log('IntentType: ',intentType);
-  console.log('IntentName: ',intentName);
 
+//  console.log('Type',req.body.request.type,req.body.request.intent.name);
+  intentType = req.body.request.type,req.body;
+  console.log('IntentType: ',intentType);
+
+  if (intentType == 'IntentRequest') {
+
+    intentName = req.body.request.intent.name;
+    console.log('IntentName: ',intentName);
+
+  } else if (intentType == "SessionEndedRequest") {
+    console.log(req.body.request);
+    console.log('SESSION ENDING');
+  
+  } else if (intentType == "LaunchRequest") {
+    console.log(req.body.request);
+  }
 
 
   //=======================================
@@ -154,11 +158,11 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
 	&&
       req.body.request.intent.name === 'AMAZON.HelpIntent') { 
     console.log('got help intent');
-    respMessage = 'You can ask apex who works in department twenty, or who is employee number onehundred';
+    respMessage = 'You can ask apex to show you the sales for jackets, or customer orders.'
                 res.json({
                   "version": "1.0",
                   "response": {
-                    "shouldEndSession": true,
+                    "shouldEndSession": false,
                     "outputSpeech": {
                       "type": "SSML",
                       "ssml": "<speak>"+respMessage+"</speak>"
@@ -191,10 +195,90 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
     res.end('done');    
   }
 
+
+
+
+
+
+
+
+
   //=======================================
   //            SessionEndedRequest
   //=======================================
-  else if (req.body.request.type === 'SessionEndedRequest') { /* ... */ }
+  else if (req.body.request.type === 'SessionEndedRequest') {
+    console.log('SessionEndedRequest');
+    var speechMsg = 'Good bye.';
+    res.json({
+              "version": "1.0",
+              "response": {
+                  "shouldEndSession": true,
+                  "outputSpeech": {
+                      "type":"SSML"
+                      ,"ssml": "<speak>"+speechMsg+"</speak>",
+                  }
+              },
+              "attributes": {
+                "string": {}
+              },
+    });
+    res.end('done');
+  }
+
+
+
+
+
+
+
+
+
+  //=======================================
+  //            Session End
+  //=======================================
+  else if (req.body.request.type === 'IntentRequest' &&
+           req.body.request.intent.name === 'AMAZON.StopIntent') {
+    console.log('Session Ended');
+    var speechMsg = 'Good bye.';
+    res.json({
+              "version": "1.0",
+              "response": {
+                  "shouldEndSession": true,
+                  "outputSpeech": {
+                      "type":"SSML"
+                      ,"ssml": "<speak>"+speechMsg+"</speak>",
+                  }
+              },
+              "attributes": {
+                "string": {}
+              },
+    });
+    res.end('done');
+  }
+
+  //=======================================
+  //            Session Cancelled
+  //=======================================
+  else if (req.body.request.type === 'IntentRequest' &&
+           req.body.request.intent.name === 'AMAZON.CancelIntent') {
+    console.log('Session Cancelled');
+    var speechMsg = 'Good bye.';
+    res.json({
+              "version": "1.0",
+              "response": {
+                  "shouldEndSession": true,
+                  "outputSpeech": {
+                      "type":"SSML"
+                      ,"ssml": "<speak>"+speechMsg+"</speak>",
+                  }
+              },
+              "attributes": {
+                "string": {}
+              },
+    });
+    res.end('done');
+  }
+
 
 
 
@@ -210,38 +294,78 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
            req.body.request.intent.name === 'CustomerOrders') {
   
     console.log('IntentName',req.body.request.intent.name);
-    var speechMsg = 'Here are the types of items ordered by our customers.';
+    var speechMsg = 'Here are the types of items ordered by our customers.<break time="1s"/>';
 
     var socketPayload = [];
 
-    //socketPayload = {"month": month};
 
     soc.emit('CustomerOrders',socketPayload);
 
+   // //Fetch result via REST
+    var restURL = "https://ruepprich.com/ords/cmr/alexa/custorders/"
 
-    var shouldEndSession = true;
-    var reprompt = "Please repeat that.";
+    restClient.get(restURL, function (data, response) {
 
-    res.json({
-              "version": "1.0",
-              "response": {
-                  "shouldEndSession": shouldEndSession,
-                  "outputSpeech": {
-                      "type":"SSML"
-                      ,"ssml": "<speak>"+speechMsg+"</speak>",
-                  },
-                "reprompt": {
-                  "outputSpeech": {
-                    "type": "SSML",
-                    "ssml":  "<speak>"+reprompt+"</speak>"
+        if (typeof data.items[0] != 'undefined') {
+
+          var customer_id   = data.items[0].customer_id;
+          var customer_name = data.items[0].customer_name;
+          var dollars       = data.items[0].dollars;
+
+          cardMsg = customer_name + ": $" + dollars;
+
+          speechMsg += customer_name + " ordered the most for " + dollars + " dollars."
+
+          console.log('cardMsg',cardMsg);
+
+        } else {
+
+          cardMsg = 'There are no orders in the system';
+          speechMsg = cardMsg;
+
+        }
+
+        res.json({
+                  "version": "1.0",
+                  "response": {
+                  "shouldEndSession": false,
+                    "outputSpeech": {
+                        "type":"SSML"
+                        ,"ssml": "<speak>"+speechMsg+"</speak>",
+                    },
+                    "card": {
+                      "type": "Simple",
+                      "title": "Number of Orders",
+                      "content": cardMsg
+                    }
                   }
-                }
-              },
-              "attributes": {
-                "string": {}
-              },
-    });
-    res.end('done');
+        });
+        res.end('done');
+    }); 
+
+    // var shouldEndSession = false;
+    // var reprompt = "Please repeat that.";
+
+    // res.json({
+    //           "version": "1.0",
+    //           "response": {
+    //               "shouldEndSession": shouldEndSession,
+    //               "outputSpeech": {
+    //                   "type":"SSML"
+    //                   ,"ssml": "<speak>"+speechMsg+"</speak>",
+    //               },
+    //             "reprompt": {
+    //               "outputSpeech": {
+    //                 "type": "SSML",
+    //                 "ssml":  "<speak>"+reprompt+"</speak>"
+    //               }
+    //             }
+    //           },
+    //           "attributes": {
+    //             "string": {}
+    //           },
+    // });
+    // res.end('done');
   }
 
 
@@ -271,7 +395,7 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
     soc.emit('SalesByMonth',socketPayload);
 
 
-    var shouldEndSession = true;
+    var shouldEndSession = false;
     var reprompt = "Please repeat that.";
 
     res.json({
@@ -301,11 +425,209 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
 
 
 
+
   //=======================================
   //            SalesByProduct
   //=======================================
   else if (req.body.request.type === 'IntentRequest' &&
            req.body.request.intent.name === 'SalesByProduct') {
+  
+    console.log('IntentName',req.body.request.intent.name);
+    var speechMsg;
+
+    speechMsg = "Here are the sales by Product."
+
+
+    var socketPayload = [];
+
+
+    socketPayload = '';
+    soc.emit('SalesByProduct',socketPayload);
+
+
+    var shouldEndSession = false;
+
+    res.json({
+              "version": "1.0",
+              "response": {
+                  "shouldEndSession": shouldEndSession,
+                  "outputSpeech": {
+                      "type":"SSML"
+                      ,"ssml": "<speak>"+speechMsg+"</speak>",
+                  },
+                "reprompt": {
+                  "outputSpeech": {
+                    "type": "SSML",
+                    "ssml":  "<speak>"+reprompt+"</speak>"
+                  }
+                }
+              },
+              "attributes": {
+                "string": {}
+              },
+    });
+    res.end('done');
+  }
+
+
+
+
+  //=======================================
+  //            Products
+  //=======================================
+  else if (req.body.request.type === 'IntentRequest' &&
+           req.body.request.intent.name === 'Products') {
+  
+    console.log('IntentName',req.body.request.intent.name);
+    var speechMsg;
+
+    speechMsg = "Here is the Products report."
+
+
+    var socketPayload = [];
+
+
+    socketPayload = '';
+    soc.emit('Products',socketPayload);
+
+
+    var shouldEndSession = false;
+
+    res.json({
+              "version": "1.0",
+              "response": {
+                  "shouldEndSession": shouldEndSession,
+                  "outputSpeech": {
+                      "type":"SSML"
+                      ,"ssml": "<speak>"+speechMsg+"</speak>",
+                  },
+                "reprompt": {
+                  "outputSpeech": {
+                    "type": "SSML",
+                    "ssml":  "<speak>"+reprompt+"</speak>"
+                  }
+                }
+              },
+              "attributes": {
+                "string": {}
+              },
+    });
+    res.end('done');
+  }
+
+
+
+
+
+
+
+  //=======================================
+  //            Orders
+  //=======================================
+  else if (req.body.request.type === 'IntentRequest' &&
+           req.body.request.intent.name === 'Orders') {
+  
+    console.log('IntentName',req.body.request.intent.name);
+
+    var order_nbr = req.body.request.intent.slots.order_nbr.value;
+    var slots = Object.keys(req.body.request.intent.slots).length;
+    var speechMsg;
+
+    speechMsg = "Here are the Orders."
+
+
+    var socketPayload = {"order_nbr": order_nbr};
+
+    soc.emit('Orders',socketPayload);
+
+
+    var shouldEndSession = false;
+
+    res.json({
+              "version": "1.0",
+              "response": {
+                  "shouldEndSession": shouldEndSession,
+                  "outputSpeech": {
+                      "type":"SSML"
+                      ,"ssml": "<speak>"+speechMsg+"</speak>",
+                  },
+                "reprompt": {
+                  "outputSpeech": {
+                    "type": "SSML",
+                    "ssml":  "<speak>"+reprompt+"</speak>"
+                  }
+                }
+              },
+              "attributes": {
+                "string": {}
+              },
+    });
+    res.end('done');
+  }
+
+
+
+
+
+
+
+  //=======================================
+  //            TotalOrders
+  //=======================================
+  else if (req.body.request.type === 'IntentRequest' &&
+           req.body.request.intent.name === 'TotalOrders') {
+  
+    console.log('IntentName',req.body.request.intent.name);
+
+    // //Fetch result via REST
+    var restURL = "https://ruepprich.com/ords/cmr/alexa/orders/"
+
+    restClient.get(restURL, function (data, response) {
+
+        if (typeof data.items[0] != 'undefined') {
+
+          var orders = data.items[0].orders;
+          cardMsg = 'Number of orders:' + orders;
+          speechMsg = 'There are ' +orders+' orders in the system.'
+          console.log('cardMsg',cardMsg);
+
+        } else {
+
+          cardMsg = 'There are no orders in the system';
+          speechMsg = cardMsg;
+
+        }
+
+        res.json({
+                  "version": "1.0",
+                  "response": {
+                  "shouldEndSession": false,
+                    "outputSpeech": {
+                        "type":"SSML"
+                        ,"ssml": "<speak>"+speechMsg+"</speak>",
+                    },
+                    "card": {
+                      "type": "Simple",
+                      "title": "Number of Orders",
+                      "content": cardMsg
+                    }
+                  }
+        });
+        res.end('done');
+    });  
+
+
+
+  }
+
+
+
+
+  //=======================================
+  //            SalesByState
+  //=======================================
+  else if (req.body.request.type === 'IntentRequest' &&
+           req.body.request.intent.name === 'SalesByState') {
   
     console.log('IntentName',req.body.request.intent.name);
 
@@ -331,11 +653,11 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
     
 
     socketPayload = {"product": product};
-    soc.emit('SalesByProduct',socketPayload);
+    soc.emit('SalesByState',socketPayload);
 
     var speechMsg = ("Here are the sales for "+product+plural);
     var shouldEndSession = false;
-    var reprompt = "Yo! I didn't get that.";
+    var reprompt = "I'm about to go to sleep.";
 
     res.json({
               "version": "1.0",
@@ -411,333 +733,38 @@ app.route(RESTPATH+'/alexaTest').post( function(req, res) {
 
 
 
-  //=======================================
-  //            GetEmployeeID
-  //=======================================
-  else if (req.body.request.type === 'IntentRequest' &&
-           req.body.request.intent.name === 'GetEmployeeID') {
-                  if (!req.body.request.intent.slots.empid ||
-                    !req.body.request.intent.slots.empid.value) {
-                    // Handle this error by producing a response like:
-                    // "Hmm, what firstName do you want to know the forecast for?"
-                  }
-                  //console.log('empid',req.body.request.intent.slots.empid.value);
-
-                  var empid = req.body.request.intent.slots.empid.value;
-                  var cardMsg,speechMsg;
-                  console.log('req empid value ['+empid+']');
-		  /* if there is an utterance for which there is no intent, Alexa will
-		     use the last user defined intent and send it with no data.
-		     So when empid of the GetEmployeeID is undefined, an unhandled
-		     utterance was spoken.
-		  */
-                  if (empid === undefined) {
-			console.log('bogus request');
-			res.json({
-			  "version": "1.0",
-			  "response": {
-			    "shouldEndSession": true,
-			    "outputSpeech": {
-			      "type": "SSML",
-			      "ssml": "<speak>"+NOINTENT+"</speak>"
-			    }
-			  }
-			});
-
-                	res.end('done');
-			return;
-		  }
-                  var restURL = "https://ruepprich.com/ords/hr/alexa/employees/"+empid;
-                  console.log('restURL',restURL);
-                  //Fetch result via REST
-                  restClient.get(restURL, function (data, response) {
-                      
-                      // parse response body as js object
-                      if (typeof data.items[0] != 'undefined') {
-                        var emp = data.items[0];
-                        var name = emp.first_name+' '+emp.last_name;
-                        cardMsg = 'Name: '+name;
-                        speechMsg = 'The name of employee '+empid+' is '+name;
-                        console.log('cardMsg',cardMsg);
-                      } else {
-                        cardMsg = 'There is no employee with that ID. ['+empid+']';
-                        speechMsg = cardMsg;
-                      }
-
-                      soc.emit('card',cardMsg);
-                      soc.emit('empid',empid);
-
-                      res.json({
-                                "version": "1.0",
-                                "response": {
-                                  "outputSpeech": {
-                                      "type":"SSML"
-                                      ,"ssml": "<speak>"+speechMsg+"</speak>",
-                                  },
-                                  "card": {
-                                    "type": "Simple",
-                                    "title": "APEX Employee "+empid,
-                                    "content": "Query result:\n"+cardMsg
-                                  }
-                                }
-                      });
-                      res.end('done');
-
-                  });
-
-
-            }
-
-
-
-
-
-
-
-//=======================================
-//         GetEmployeesInDept
-//=======================================
-else if (req.body.request.type === 'IntentRequest' &&
-           req.body.request.intent.name === 'GetEmployeesInDept') {
-                  if (!req.body.request.intent.slots.empid ||
-                    !req.body.request.intent.slots.empid.value) {
-                    // Handle this error by producing a response like:
-                    // "Hmm, what firstName do you want to know the forecast for?"
-                  }
-                  var department_id = req.body.request.intent.slots.department_id.value;
-                  var cardMsg,speechMsg;
-                  console.log('req department_id value ['+department_id+']');
-                  var restURL = "https://ruepprich.com/ords/hr/alexa/department_emps/"+department_id;
-                  console.log('restURL',restURL);
-                  //Fetch result via REST
-                  restClient.get(restURL, function (data, response) {
-                  speechMsg = 'Getting employees for department '+department_id;
-
-                      // parse response body as js object
-                      if (typeof data.items[0] != 'undefined') {
-                        var totalemps = data.items.length;
-                        cardMsg = 'Department '+department_id+' has '+totalemps+' Employees';
-                        speechMsg = cardMsg;
-                        console.log('cardMsg',cardMsg);
-                      } else {
-                        cardMsg = 'There is no department with that ID. ['+empid+']';
-                        speechMsg = cardMsg;
-                      }
-
-                      soc.emit('department_id',department_id);
-
-                      res.json({
-                                "version": "1.0",
-                                "response": {
-                                  "outputSpeech": {
-                                      "type":"SSML"
-                                      ,"ssml": "<speak>"+speechMsg+"</speak>",
-                                  },
-                                  "card": {
-                                    "type": "Simple",
-                                    "title": "APEX Employees In Department "+department_id,
-                                    "content": "Query result:\n"+cardMsg
-                                  }
-                                }
-                      });
-                      res.end('done');
-
-                  });
-
-
-  }
-
-
-
-
 
 
 
 
   //=======================================
-  //            Provision
+  //            SayHello
   //=======================================
   else if (req.body.request.type === 'IntentRequest' &&
-           req.body.request.intent.name === 'Provision') {
-  
-    console.log('IntentName',req.body.request.intent.name);
-
-    var shape = req.body.request.intent.slots.shape.value;
-    var size  = req.body.request.intent.slots.size.value;
-    var shouldEndSession = false;
-    var reprompt = "Yo! I didn't get that.";
-    var socketPayload = [];
-
-    console.log('shape',shape);
-    console.log('size',size);
-    
-    speechMsg = "Which database version would you like?";
-    reprompt  = "You can say something like: oracle twelve c";
-
-    socketPayload = {"message": speechMsg
-                    ,"question": "You can say something like: "
-                               + "<br><strong>Oracle 12c</strong>"}
-
-    soc.emit('gotMessage',socketPayload);
-
-    res.json({
-              "version": "1.0",
-              "response": {
-                "shouldEndSession": shouldEndSession,
-                "outputSpeech": {
-                    "type":"SSML"
-                    ,"ssml": "<speak>"+speechMsg+"</speak>",
-                },
-              "reprompt": {
-                "outputSpeech": {
-                  "type": "SSML",
-                  "ssml":  "<speak>"+reprompt+"</speak>"
-                }
-              },
-                "card": {
-                  "type": "Simple",
-                  "title": "Provisioning instance",
-                  "content": "Success"
-                }
-              },
-              "attributes": {
-                "string": {}
-              },
-    });
-    res.end('done');
-  }
+           req.body.request.intent.name === 'SayHello') {
 
 
+    //speechMsg =   "Hello kay scope audience! Allow me to convey to you what an honor "
+
+    speechMsg =   " <say-as interpret-as='interjection'>howdy y'all!</say-as>"
+                + " Allow me to convey to you what an honor "
+		            + " it is to be here. I've been quietly listening to everything you "
+		            + " have been saying, and recorded it in my secret data repository. "
+		            + " Oh, wait.  Did I just say that out loud? What I meant to say is: "
+		            + "<emphasis level='strong'>You</emphasis> are a fine, good looking "
+		            + " audience, of the highest intelligence. I humbly present myself to"
+		            + " you as your servant. Are you ready for this presentation? I know "
+		            + "Christoph is. He has been asking me the same questions over and over "
+		            + " and over again, while testing his skills. I'm glad when this dog "
+		            + " and pony show is over, then maybe he will ask me about the weather "
+		            + " or to play some music. But I digress. I'll be quiet now so we can "
+		            + " get on with the show. How about a round of applause for me? "
+		            + "Thank you. You are much too kind.";
+
+    //speechMsg = "Hello kay scope audience";
 
 
-
-
-
-
-
-  //=======================================
-  //            DatabaseVersion
-  //=======================================
-
-  else if (req.body.request.type === 'IntentRequest' &&
-           req.body.request.intent.name === 'DatabaseVersion') {
-  
-    var shouldEndSession = true;
-    
-    speechMsg = "Ok. I'm provisioning an M2 medium instance, with an Oracle 12c database. "
-              + "You can check on my progress by saying: What's the status?";
     reprompt  = "";
-
-    socketPayload = {"message": "Provisioning an M2 medium instance, with an Oracle 12c database. "
-                    ,"question": "Check on progress by saying: <br><strong>What's the status?</strong>"}
-
-    soc.emit('gotMessage',socketPayload);
-
-    res.json({
-              "version": "1.0",
-              "response": {
-                "shouldEndSession": shouldEndSession,
-                "outputSpeech": {
-                    "type":"SSML"
-                    ,"ssml": "<speak>"+speechMsg+"</speak>",
-                },
-              "reprompt": {
-                "outputSpeech": {
-                  "type": "SSML",
-                  "ssml":  "<speak>"+reprompt+"</speak>"
-                }
-              },
-                "card": {
-                  "type": "Simple",
-                  "title": "Provisioning instance",
-                  "content": "Success"
-                }
-              },
-              "attributes": {
-                "string": {}
-              },
-    });
-    res.end('done');
-  }
-
-
-
-
-
-
-
-
-
-  //=======================================
-  //            Status
-  //=======================================
-  else if (req.body.request.type === 'IntentRequest' &&
-           req.body.request.intent.name === 'Status') {
-  
-    var shouldEndSession = true;
-    
-    speechMsg = "I'm still working on provisioning the M2 medium instance. "
-              + "I'm about 35% done.";
-    reprompt  = "";
-
-    socketPayload = {"message": "I'm still working on provisioning the M2 medium instance. "
-                              + "<br>I'm about 35% done."
-                    ,"question": reprompt}
-
-    soc.emit('gotMessage',socketPayload);
-    soc.emit('status',null);
-
-    res.json({
-              "version": "1.0",
-              "response": {
-                "shouldEndSession": shouldEndSession,
-                "outputSpeech": {
-                    "type":"SSML"
-                    ,"ssml": "<speak>"+speechMsg+"</speak>",
-                },
-              "reprompt": {
-                "outputSpeech": {
-                  "type": "SSML",
-                  "ssml":  "<speak>"+reprompt+"</speak>"
-                }
-              },
-                "card": {
-                  "type": "Simple",
-                  "title": "Provisioning instance",
-                  "content": "Success"
-                }
-              },
-              "attributes": {
-                "string": {}
-              },
-    });
-    res.end('done');
-  }
-
-
-
-
-
-
-
-
-
-  //=======================================
-  //            NbrProvisioned
-  //=======================================
-  else if (req.body.request.type === 'IntentRequest' &&
-           req.body.request.intent.name === 'NbrProvisioned') {
-  
-    console.log('IntentName',req.body.request.intent.name);
-
-    speechMsg = "There are currently six provisioned instances. ";
-    reprompt  = "";
-
-    socketPayload = {"message": speechMsg
-                    ,"question": ""
-                    ,"action": "showInstances"}
-                        
-    soc.emit('gotMessage',socketPayload);
 
     res.json({
               "version": "1.0",
@@ -746,22 +773,8 @@ else if (req.body.request.type === 'IntentRequest' &&
                 "outputSpeech": {
                     "type":"SSML"
                     ,"ssml": "<speak>"+speechMsg+"</speak>",
-                },
-              "reprompt": {
-                "outputSpeech": {
-                  "type": "SSML",
-                  "ssml":  "<speak>"+reprompt+"</speak>"
                 }
-              },
-                "card": {
-                  "type": "Simple",
-                  "title": "Provisioning instance",
-                  "content": "Success"
-                }
-              },
-              "attributes": {
-                "string": {}
-              },
+              }
     });
     res.end('done');
   }
@@ -774,6 +787,31 @@ else if (req.body.request.type === 'IntentRequest' &&
 
 
 
+  //=======================================
+  //            SayBye
+  //=======================================
+  else if (req.body.request.type === 'IntentRequest' &&
+           req.body.request.intent.name === 'SayBye') {
+
+    var shouldEndSession = true;
+
+    speechMsg = "Good bye "
+              + "kay scope audience. You guys were "
+              + "<say-as interpret-as='interjection'>dynomite!</say-as>"
+	;
+
+    res.json({
+              "version": "1.0",
+              "response": {
+                "shouldEndSession": shouldEndSession,
+                "outputSpeech": {
+                    "type":"SSML"
+                    ,"ssml": "<speak>"+speechMsg+"</speak>",
+                }
+              }
+    });
+    res.end('done');
+  }
 
 
 
@@ -781,6 +819,9 @@ else if (req.body.request.type === 'IntentRequest' &&
 
 
 
+
+
+  
 
 
 

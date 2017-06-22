@@ -4,65 +4,43 @@
       "intent": "CustomerOrders"
     },
     {
+      "intent": "SalesByMonth",
       "slots": [
         {
           "name": "month",
           "type": "AMAZON.Month"
         }
-      ],
-      "intent": "SalesByMonth"
+      ]
     },
     {
+      "intent": "SalesByState",
       "slots": [
         {
           "name": "product",
           "type": "PRODUCTS"
         }
-      ],
+      ]
+    },
+    {
       "intent": "SalesByProduct"
     },
     {
-      "slots": [
-        {
-          "name": "type",
-          "type": "SHAPES"
-        }
-      ],
-      "intent": "NbrProvisioned"
-    },
-    {
-      "slots": [
-        {
-          "name": "dbversion",
-          "type": "AMAZON.NUMBER"
-        }
-      ],
-      "intent": "DatabaseVersion"
-    },
-    {
-      "slots": [
-        {
-          "name": "shape",
-          "type": "SHAPES"
-        },
-        {
-          "name": "size",
-          "type": "SIZES"
-        }
-      ],
-      "intent": "Provision"
+      "intent": "ReportProduct"
     },
     {
       "intent": "SayHello"
     },
     {
-      "intent": "Status"
-    },
-    {
-      "intent": "TimeToComplete"
+      "intent": "SayBye"
     },
     {
       "intent": "AMAZON.HelpIntent"
+    },
+    {
+      "intent": "AMAZON.StopIntent"
+    },
+    {
+      "intent": "AMAZON.CancelIntent"
     }
   ]
 }
